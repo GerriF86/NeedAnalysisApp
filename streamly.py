@@ -1,6 +1,7 @@
 import streamlit as st
 import requests  # Importing requests for API calls
 from PIL import Image  # Uncomment if using an image
+import json
 
 # Page Configuration
 st.set_page_config(page_title="AI-Powered Job Ad Generator", page_icon="📄", layout="wide")
@@ -102,14 +103,15 @@ if st.button("Generate Job Advertisement"):
         # Call the Ollama API with streaming response handling
         try:
             response = requests.post(
-                "http://localhost:11434/api/generate",
+                "http://127.0.0.1:11434/api/generate",
                 json={
                     "model": "koesn/dolphin-llama3-8b",
                     "prompt": prompt,
                     "num_ctx": 8192
                 },
                 stream=True  # Enable streaming response
-            )
+                #timeout=30
+            )   
             response.raise_for_status()
 
             # Process the streaming response
@@ -117,7 +119,7 @@ if st.button("Generate Job Advertisement"):
             for line in response.iter_lines():
                 if line:
                     chunk = line.decode("utf-8")
-                    data = eval(chunk)  # Convert the string to a dictionary
+                    data = json.loads(chunk)  # Convert the string to a dictionary
                     job_ad += data.get("response", "")
                     if data.get("done", False):
                         break
