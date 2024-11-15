@@ -11,3 +11,6 @@ langchain-huggingface==0.1.0
 langchain-groq==0.2.0
 langchainhub==0.1.21
 pypdf==4.2.0
+requests==2.31.0
+Pillow==10.0.0
+altair==4.2.0

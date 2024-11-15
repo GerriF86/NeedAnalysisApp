@@ -1,170 +1,128 @@
-import json
-#import faiss
-import numpy as np
-import re
-import os
-import pandas as pd
-from tqdm import tqdm, trange
-from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 import streamlit as st
-import logging
-from langchain_groq import ChatGroq
-import warnings
-warnings.filterwarnings("ignore")
+import requests  # Importing requests for API calls
+from PIL import Image  # Uncomment if using an image
 
-# Load environment variables
-load_dotenv()
-groq_api_key = os.getenv('GROQ_API_KEY')
+# Page Configuration
+st.set_page_config(page_title="AI-Powered Job Ad Generator", page_icon="📄", layout="wide")
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# App Title
+st.title("Recruitment Need Analysis App")
+st.subheader("Discover important aspects of the role you want to fill and identify the skills and qualifications you need.")
 
-# Constants
-NUMBER_OF_MESSAGES_TO_DISPLAY = 20
-API_DOCS_URL = "https://docs.streamlit.io/library/api-reference"
+# Introduction
+st.markdown("""
+    This app assists HR professionals in creating comprehensive job descriptions 
+    by guiding them through interactive questions. Answer a series of prompts to 
+    generate a formatted job description tailored to your needs.
+""")
 
-# Streamlit Page Configuration
-st.set_page_config(
-    page_title="Power2Rec - Job Description Generator and Streamlit Assistant",
-    page_icon="imgs/avatar_streamly.png",
-    layout="wide",
-    initial_sidebar_state="auto",
-    menu_items={
-        "Get help": "https://github.com/GerriF86/nlu",
-        "Report a bug": "https://github.com/GerriF86/nlu",
-        "About": """
-            ## Power2Rec Job Description Generator and Streamlit Assistant
-            ### Powered using llamayxz
+# Include an Image on the Front Page
+# Uncomment the following lines if you want to display the image
+# try:
+#     image = Image.open('images/iceberg-model.jpg')
+#     st.image(image, caption="Iceberg Model of System Thinking", use_column_width=True)
+# except FileNotFoundError:
+#     st.warning("Image not found. Ensure the file path is correct.")
 
-            **GitHub**: https://github.com/GerriF86/
-
-            The AI Assistant, Power2Rec, aims to assist in generating job descriptions, 
-            and provide Streamlit app development guidance.
-        """
-    }
+# Step 1: Role Selection
+st.header("Position-Specific Details")
+selected_role = st.selectbox(
+    "Select the Position:",
+    ["Data Scientist", "Data Analyst", "Software Engineer", "Other"]
 )
 
-# Streamlit Title
-st.title("Power2Rec - Job Description Generator & Streamlit Assistant")
+if selected_role == "Data Scientist":
+    specialization = st.multiselect(
+        "Choose Specializations:",
+        ["Machine Learning", "Statistics", "Deep Learning", "Data Visualization"]
+    )
+    tools = st.multiselect(
+        "Choose Tools/Technologies:",
+        ["Python", "R", "TensorFlow", "PyTorch", "SQL", "Pandas", "NumPy", "Jupyter Notebooks"]
+    )
+elif selected_role == "Data Analyst":
+    focus_area = st.radio(
+        "Primary Focus:",
+        ["Data Cleaning", "Reporting", "Business Analysis"]
+    )
+    software = st.multiselect(
+        "Choose Key Software Tools:",
+        ["Excel", "Power BI", "Tableau", "SQL", "Python", "R", "Google Analytics"]
+    )
+elif selected_role == "Software Engineer":
+    tech_stack = st.multiselect(
+        "Select Preferred Tech Stack:",
+        ["Java", "C++", "Python", "JavaScript", "Ruby", "AWS", "Docker", "Kubernetes"]
+    )
+else:
+    custom_details = st.text_area("Describe the Role in Detail:")
 
-# ## Step 0: Load the JSON Files
-salaries = pd.read_json('data/json/salaries')
-resumes = pd.read_json('data/json/Entity Recognition in Resumes.json')
-it_jobs = pd.read_json('data/json/IT Job Desc Annotated Detailed.json')
+# Step 2: Work Model and Compensation
+st.header("Work Environment and Compensation")
+work_model = st.selectbox(
+    "Select Work Model:",
+    ["Onsite", "Remote", "Hybrid"]
+)
+salary_range = st.slider("Expected Salary Range (in USD):", 30000, 200000, (50000, 100000))
 
-# # Job Description Generator
+# Step 3: Job Ad Details
+st.header("Additional Job Details")
+job_title = st.text_input("Job Title:")
+company = st.text_input("Company Name:")
+location = st.text_input("Location:")
+responsibilities = st.text_area("Key Responsibilities:")
+requirements = st.text_area("Key Requirements:")
+benefits = st.text_area("Benefits Offered:")
+target_audience = st.text_area("Describe the Target Audience:")
 
-# ## Step 1: Initialization
+# Generate Job Ad Button
+if st.button("Generate Job Advertisement"):
+    if all([job_title, company, location, responsibilities, requirements, benefits, target_audience]):
+        # Prepare the prompt for the model
+        prompt = f"""
+        Create a job advertisement for the following position:
 
-class JobDescriptionGenerator:
-    def __init__(self):
-        # Initialize data with default values
-        self.data = {
-            "Position": "N/A",
-            "Specialization": "N/A",
-            "Work Model": "N/A",
-            "Remote Location": "N/A",
-            "Remote Timezone": "N/A",
-            "Technical Equipment": "N/A",
-            "Remote Percentage": "N/A",
-            "BI Tools": "N/A",
-            "Required Tools": "N/A",
-            "Visualization Tools": "N/A",
-            "Statistical Methods": "N/A",
-            "Big Data Tools": "N/A",
-            "Experience Level": "N/A",
-            "Leadership Skills": "None",
-            "Educational Requirements": "None",
-            "Project Leadership": "No",
-            "Compensation": "N/A",
-            "Home Office Allowance": "None",
-            "Remote Benefits": "None",
-            "Additional Benefits": "None"
-        }
-        # Load pre-trained model for embedding generation
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        # Initialize FAISS index for similarity search
-        self.index = None
-        self.documents = []
+        **Job Title:** {job_title}
+        **Company:** {company}
+        **Location:** {location}
 
-    # ## Step 2: Data Cleaning and Preprocessing
-    def clean_and_preprocess_dataset(self, dataset):
-        filtered_data = dataset[dataset['job_description'].notna()]
-        job_descriptions = filtered_data['job_description'].str.strip().str.lower().tolist()
-        unique_job_descriptions = list(set(job_descriptions))
-        processed_descriptions = [re.sub(r'[^a-zA-Z0-9\s]', '', desc) for desc in unique_job_descriptions]
-        return processed_descriptions
+        **Responsibilities:**
+        {responsibilities}
 
-    # ## Step 3: Loading Dataset and Building FAISS Index
-    def load_dataset_and_build_index(self, dataset):
-        st.write("Cleaning and preprocessing dataset...")
-        job_descriptions = self.clean_and_preprocess_dataset(dataset)
-        self.documents = job_descriptions
+        **Requirements:**
+        {requirements}
 
-        st.write("Generating embeddings...")
-        embeddings = []
-        for desc in trange(len(job_descriptions), desc="Embedding job descriptions"):
-            embedding = self.model.encode(job_descriptions[desc])
-            embeddings.append(embedding)
-        embeddings = np.array(embeddings)
+        **Benefits:**
+        {benefits}
 
-        st.write("Building FAISS index...")
-        if embeddings.size > 0:
-            dimension = embeddings.shape[1]
-            self.index = faiss.IndexFlatL2(dimension)
-            self.index.add(embeddings)
-        else:
-            st.write("Error: No embeddings found to build the FAISS index.")
+        **Target Audience:**
+        {target_audience}
+        """
 
-    # ## Step 4: Finding Similar Job Descriptions
-    def find_similar_jobs(self, query, k=3):
-        if self.index is None:
-            st.write("Error: FAISS index is not initialized. Please load the dataset and build the index first.")
-            return []
-
-        st.write("Generating embedding for the query...")
-        query_embedding = self.model.encode([query])
-
-        st.write("Searching for similar job descriptions...")
-        _, indices = self.index.search(np.array(query_embedding), k)
-
-        return [self.documents[idx] for idx in indices[0]]
-
-# Create an instance of the JobDescriptionGenerator
-generator = JobDescriptionGenerator()
-
-# Load dataset and build FAISS index
-if st.button("Build Job Description Index"):
-    with st.spinner("Building FAISS index..."):
-        generator.load_dataset_and_build_index(it_jobs)
-    st.success("FAISS index built successfully!")
-
-# Collect job information and generate description
-if st.button("Generate Job Description"):
-    with st.spinner("Collecting job information and generating description..."):
-        generator.run()
-    st.success("Job description generated!")
-
-# Find similar job descriptions
-query = st.text_input("Enter a job role or description to find similar roles:")
-if st.button("Find Similar Jobs"):
-    if query:
-        with st.spinner("Searching for similar jobs..."):
-            similar_jobs = generator.find_similar_jobs(query)
-        st.write("\n--- Similar Job Descriptions ---")
-        for job in similar_jobs:
-            st.write(job)
+        # Call the Ollama API
+        try:
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "koesn/dolphin-llama3-8b",
+                    "prompt": prompt,
+                    "num_ctx": 8192
+                }
+            )
+            response.raise_for_status()
+            job_ad = response.json().get("data", [{}])[0].get("content", "").strip()
+            if job_ad:
+                st.subheader("Generated Job Advertisement:")
+                st.markdown(job_ad)
+                st.download_button(
+                    label="Download Job Advertisement",
+                    data=job_ad,
+                    file_name=f"{job_title}_Job_Ad.txt",
+                    mime="text/plain"
+                )
+            else:
+                st.error("The model did not return any content. Please try again.")
+        except requests.exceptions.RequestException as e:
+            st.error(f"An error occurred: {e}")
     else:
-        st.warning("Please enter a job role or description to find similar roles.")
-
-# Additional sections of the Streamlit assistant to display updates
-def display_streamlit_updates():
-    with st.expander("Streamlit 1.36 Announcement", expanded=False):
-        st.markdown("For more details on this version, check out the [Streamlit Forum post](https://docs.streamlit.io/library/changelog#version).")
-
-st.sidebar.markdown("---")
-mode = st.sidebar.radio("Select Mode:", options=["Job Description Generator", "Streamlit Updates"], index=0)
-
-if mode == "Streamlit Updates":
-    display_streamlit_updates()
+        st.warning("Please fill in all fields before generating the job advertisement.")
