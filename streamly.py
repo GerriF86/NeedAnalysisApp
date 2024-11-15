@@ -99,7 +99,7 @@ if st.button("Generate Job Advertisement"):
         {target_audience}
         """
 
-        # Call the Ollama API
+        # Call the Ollama API with streaming response handling
         try:
             response = requests.post(
                 "http://localhost:11434/api/generate",
@@ -107,11 +107,22 @@ if st.button("Generate Job Advertisement"):
                     "model": "koesn/dolphin-llama3-8b",
                     "prompt": prompt,
                     "num_ctx": 8192
-                }
+                },
+                stream=True  # Enable streaming response
             )
             response.raise_for_status()
-            job_ad = response.json().get("data", [{}])[0].get("content", "").strip()
-            if job_ad:
+
+            # Process the streaming response
+            job_ad = ""
+            for line in response.iter_lines():
+                if line:
+                    chunk = line.decode("utf-8")
+                    data = eval(chunk)  # Convert the string to a dictionary
+                    job_ad += data.get("response", "")
+                    if data.get("done", False):
+                        break
+
+            if job_ad.strip():
                 st.subheader("Generated Job Advertisement:")
                 st.markdown(job_ad)
                 st.download_button(
