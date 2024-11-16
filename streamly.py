@@ -1,4 +1,5 @@
 import streamlit as st
+import subprocess
 import requests  # Importing requests for API calls
 from PIL import Image  # Uncomment if using an image
 import json
@@ -110,7 +111,6 @@ if st.button("Generate Job Advertisement"):
                     "num_ctx": 8192
                 },
                 stream=True  # Enable streaming response
-                #timeout=30
             )   
             response.raise_for_status()
 
@@ -139,3 +139,7 @@ if st.button("Generate Job Advertisement"):
             st.error(f"An error occurred: {e}")
     else:
         st.warning("Please fill in all fields before generating the job advertisement.")
+
+# Corrected: Removed undefined main() function call.
+# The script is already structured properly for Streamlit.
+# The __name__ == "__main__" block is not needed for Streamlit apps.
