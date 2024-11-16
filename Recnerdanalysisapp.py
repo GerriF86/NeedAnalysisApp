@@ -10,16 +10,23 @@ from streamlit_folium import st_folium
 st.set_page_config(page_title="AI-Powered Job Ad Generator", page_icon="📄", layout="wide")
 
 # Sidebar for Navigation
-st.sidebar.title("Navigation")
+st.sidebar.title("")
 selected_page = st.sidebar.radio("Go to", ["Home", "About Us", "Impressum"])
 
 if selected_page == "About Us":
     st.title("About Us")
-    st.write("We are a team of HR professionals and data scientists dedicated to helping you craft the perfect job description. Our goal is to make the hiring process more efficient and effective for both recruiters and candidates.")
+    st.write("We are Olivia and Gerrit, a team of HR professionals and data scientists dedicated to helping you craft the perfect job description. Our goal is to make the hiring process more efficient and effective for both recruiters and candidates.")
 elif selected_page == "Impressum":
     st.title("Impressum")
-    st.write("This is the legal information about our company. Here you can put the details required by law.")
+    st.write("This is the legal information about our company. Here we will put the details required by law.")
 elif selected_page == "Home":
+    # Add an Image above the Header
+    try:
+        image = Image.open(r'F:\Capstone\Github Repo\WebApp\NeedAnalysisApp\imgs\iceberg-model-of-system-thinking-is-an-illustration-of-a-blue-mountain-and-presentation-this-theory-is-to-analyze-the-root-causes-of-events-hidden-underwater-for-developing-marketing-and-trend-vector.jpg')
+        st.image(image, caption="AI-Powered Job Ad Generator", use_column_width=True)
+    except FileNotFoundError:
+        st.warning("Image not found. Please ensure the file path is correct.")
+
     # App Title
     st.title("Recruitment Need Analysis App")
     st.subheader("Discover important aspects of the role you want to fill and identify the skills and qualifications you need.")
